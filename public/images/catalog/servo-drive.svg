@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" role="img" aria-labelledby="title desc">
+  <title id="title">Servo Drive</title>
+  <desc id="desc">Stylized servo drive module illustration</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#052e16"/>
+      <stop offset="100%" stop-color="#047857"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="600" fill="url(#bg)"/>
+  <rect x="250" y="120" width="300" height="360" rx="20" fill="#0f172a" stroke="#6ee7b7" stroke-width="6"/>
+  <rect x="280" y="170" width="240" height="70" rx="10" fill="#1e293b"/>
+  <rect x="280" y="260" width="240" height="70" rx="10" fill="#1e293b"/>
+  <rect x="280" y="350" width="240" height="70" rx="10" fill="#1e293b"/>
+  <circle cx="320" cy="205" r="10" fill="#34d399"/>
+  <circle cx="320" cy="295" r="10" fill="#34d399"/>
+  <circle cx="320" cy="385" r="10" fill="#34d399"/>
+  <text x="400" y="535" text-anchor="middle" fill="#d1fae5" font-family="Arial, sans-serif" font-size="40" font-weight="700">SERVO DRIVE</text>
+</svg>

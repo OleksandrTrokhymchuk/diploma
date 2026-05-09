@@ -1,0 +1,33 @@
+{
+  "name": "robotics-semantic-search",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare",
+    "db:seed": "prisma db seed"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "@prisma/client": "^7.8.0",
+    "nuxt": "^3.16.0",
+    "vue": "^3.5.13",
+    "vue-router": "^4.5.0"
+  },
+  "devDependencies": {
+    "@nuxtjs/tailwindcss": "^6.14.0",
+    "@prisma/adapter-pg": "^7.8.0",
+    "@types/node": "^25.6.0",
+    "dotenv": "^17.4.2",
+    "pg": "^8.20.0",
+    "prisma": "^7.8.0",
+    "tsx": "^4.20.6",
+    "typescript": "^5.7.3"
+  }
+}

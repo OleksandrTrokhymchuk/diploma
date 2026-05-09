@@ -1,0 +1,56 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ComponentCategory {
+  DISTANCE_SENSOR
+  CAMERA
+  SERVO_DRIVE
+  MANIPULATOR
+}
+
+enum StockReason {
+  REPLENISHMENT
+  ORDER
+  WRITE_OFF
+}
+
+model Component {
+  id             String            @id @default(uuid())
+  sku            String            @unique
+  name           String
+  category       ComponentCategory
+  manufacturer   String
+  model          String
+  description    String
+  imageUrl       String?
+  unitPrice      Decimal           @db.Decimal(10, 2)
+  quantityOnHand Int               @default(0)
+  minStockLevel  Int               @default(0)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  stockHistory   StockHistory[]
+}
+
+model StockHistory {
+  id           String      @id @default(uuid())
+  componentId  String
+  component    Component   @relation(fields: [componentId], references: [id], onDelete: Cascade)
+  changeAmount Int
+  balanceAfter Int
+  reason       StockReason
+  reasonNote   String?
+  createdAt    DateTime    @default(now())
+
+  @@index([componentId, createdAt])
+}
