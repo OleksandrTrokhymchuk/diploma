@@ -1,6 +1,6 @@
 import { prisma } from '../../utils/prisma'
 import { requireAdmin } from '../../utils/requireAdmin'
-import type { ComponentCategory } from '../../../app/generated/prisma/enums'
+import type { ComponentCategory } from '@prisma/client'
 import { normalizeApiError } from '../../utils/apiError'
 
 type ProductInput = {

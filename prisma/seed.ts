@@ -1,7 +1,7 @@
 import 'dotenv/config'
 import { PrismaPg } from '@prisma/adapter-pg'
 import bcrypt from 'bcrypt'
-import { PrismaClient, type ComponentCategory, type StockReason } from '../app/generated/prisma/client'
+import { PrismaClient, type ComponentCategory, type StockReason } from '@prisma/client'
 
 /** Локальні фото категорій (оптимізовані WebP у public/catalog/photos/). */
 const CATALOG_IMAGES = {

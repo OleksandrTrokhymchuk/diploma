@@ -1,4 +1,4 @@
-import type { StockReason } from '../../../app/generated/prisma/enums'
+import type { StockReason } from '@prisma/client'
 import { prisma } from '../../utils/prisma'
 import { normalizeApiError } from '../../utils/apiError'
 import { resolveCatalogImageUrl } from '../../../shared/lib/catalogImageUrl'

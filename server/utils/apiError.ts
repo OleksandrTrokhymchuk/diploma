@@ -1,4 +1,4 @@
-import { Prisma } from '../../app/generated/prisma/client'
+import { Prisma } from '@prisma/client'
 
 export function normalizeApiError(error: unknown, fallbackMessage: string) {
   if (error && typeof error === 'object' && 'statusCode' in error) {

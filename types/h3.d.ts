@@ -1,4 +1,4 @@
-import type { UserRole } from '../app/generated/prisma/client'
+import type { UserRole } from '@prisma/client'
 
 declare module 'h3' {
   interface H3EventContext {

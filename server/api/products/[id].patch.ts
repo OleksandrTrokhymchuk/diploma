@@ -1,4 +1,4 @@
-import { Prisma } from '../../../app/generated/prisma/client'
+import { Prisma } from '@prisma/client'
 import { prisma } from '../../utils/prisma'
 import { requireAdmin } from '../../utils/requireAdmin'
 import { normalizeApiError } from '../../utils/apiError'

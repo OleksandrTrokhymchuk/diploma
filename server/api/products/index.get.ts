@@ -1,5 +1,5 @@
 import { prisma } from "../../utils/prisma";
-import type { ComponentCategory } from "../../../app/generated/prisma/enums";
+import type { ComponentCategory } from '@prisma/client'
 import { normalizeApiError } from "../../utils/apiError";
 import { parsePage, parsePageSize } from "../../utils/queryParams";
 import { resolveCatalogImageUrl } from "../../../shared/lib/catalogImageUrl";

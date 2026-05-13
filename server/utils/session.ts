@@ -1,6 +1,6 @@
 import { getIronSession } from 'iron-session'
 import type { H3Event } from 'h3'
-import type { UserRole } from '../../app/generated/prisma/client'
+import type { UserRole } from '@prisma/client'
 
 export type SessionUserRole = UserRole
 
