@@ -25,6 +25,11 @@ enum StockReason {
   WRITE_OFF
 }
 
+enum UserRole {
+  ADMIN
+  WORKER
+}
+
 model Component {
   id             String            @id @default(uuid())
   sku            String            @unique
@@ -33,6 +38,7 @@ model Component {
   manufacturer   String
   model          String
   description    String
+  specs          Json?
   imageUrl       String?
   unitPrice      Decimal           @db.Decimal(10, 2)
   quantityOnHand Int               @default(0)
@@ -42,10 +48,35 @@ model Component {
   stockHistory   StockHistory[]
 }
 
+model User {
+  id                      String                  @id @default(uuid())
+  email                   String                  @unique
+  passwordHash            String
+  firstName               String
+  lastName                String
+  role                    UserRole                @default(WORKER)
+  createdAt               DateTime                @default(now())
+  stockHistory            StockHistory[]
+  replenishmentRequests   ReplenishmentRequest[]
+}
+
+model ReplenishmentRequest {
+  id        String   @id @default(uuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  lines     Json
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([createdAt])
+}
+
 model StockHistory {
   id           String      @id @default(uuid())
   componentId  String
   component    Component   @relation(fields: [componentId], references: [id], onDelete: Cascade)
+  userId       String?
+  user         User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
   changeAmount Int
   balanceAfter Int
   reason       StockReason
@@ -53,4 +84,5 @@ model StockHistory {
   createdAt    DateTime    @default(now())
 
   @@index([componentId, createdAt])
+  @@index([userId])
 }

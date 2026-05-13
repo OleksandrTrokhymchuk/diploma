@@ -1,6 +1,98 @@
 import 'dotenv/config'
 import { PrismaPg } from '@prisma/adapter-pg'
+import bcrypt from 'bcrypt'
 import { PrismaClient, type ComponentCategory, type StockReason } from '../app/generated/prisma/client'
+
+/** Локальні фото категорій (оптимізовані WebP у public/catalog/photos/). */
+const CATALOG_IMAGES = {
+  kukaManipulator: '/catalog/photos/manipulator.webp',
+  camera: '/catalog/photos/camera.webp',
+  distanceSensor: '/catalog/photos/distance-sensor.webp',
+  servoDrive: '/catalog/photos/servo-drive.webp',
+} as const
+
+const SPECS = {
+  hcSr04: {
+    'Діапазон вимірювання': '2 см – 4 м (типово, залежить від умов)',
+    'Напруга живлення': '5 В DC',
+    'Споживання струму': '15 мА (активний режим)',
+    'Кут огляду': '≈ 15°',
+    'Інтерфейс': 'Trigger / Echo (TTL)',
+    'Робоча температура': '−15…+70 °C',
+  },
+  vl53: {
+    'Технологія': 'ToF (940 нм VCSEL)',
+    'Дальність': 'до 2 м (типово, залежить від цілі та освітлення)',
+    'Точність': '±3 % (орієнтовно в діапазоні до 1 м)',
+    'Напруга живлення': '2.8 В DC',
+    'Інтерфейс': 'I²C (до 400 кГц)',
+    'Розмір (орієнтовно)': '12.4 × 2.4 мм (модуль)',
+  },
+  lidar: {
+    'Тип': '2D лазерний сканер (обертання)',
+    'Дальність': 'до 18 м (залежно від поверхні та освітлення)',
+    'Частота сканування': '5–10 Гц (залежно від моделі серії A2)',
+    'Живлення': '5 В DC (USB / окремий адаптер)',
+    'Інтерфейс': 'UART / USB (залежить від комплектації)',
+    'Маса': '≈ 300 г (без кабелю)',
+  },
+  camUsb: {
+    'Роздільність': 'до 1920×1080 @ 30 fps',
+    'Об\'єктив': 'Фіксований, автофокус',
+    'Інтерфейс': 'USB 2.0',
+    'Кут огляду': 'діагональ ≈ 78°',
+    'Живлення': 'через USB',
+    'Кріплення': '1/4" гайка (типово для штативів)',
+  },
+  camRgbd: {
+    'Сенсори': 'Stereo depth + RGB',
+    'Дальність глибини': '0.3–10 м (залежить від сцени)',
+    'Роздільність RGB': 'до 1920×1080',
+    'Інтерфейс': 'USB 3.1 Gen1',
+    'IMU': '6-осьовий (акселерометр + гіроскоп)',
+    'Живлення': 'через USB-C (типово)',
+  },
+  camIndustrial: {
+    'Сенсор': 'CMOS global shutter (промисловий клас)',
+    'Інтерфейс': 'USB3 Vision / GigE Vision (залежить від підтипу)',
+    'Роздільність': 'до 5 MP (залежить від конфігурації Blackfly S)',
+    'Частота кадрів': 'до сотень fps (залежить від ROI та інтерфейсу)',
+    'Живлення': 'PoE / зовнішнє 12–24 В DC (залежить від модифікації)',
+    'Монтаж': 'C-mount / CS-mount',
+  },
+  fanucServo: {
+    'Живлення шини': '200–240 В AC (±10 %)',
+    'Номінальна потужність': '1.5–5.5 кВ·А (залежить від типорозміру alpha i / beta i)',
+    'Інтерфейс керування': 'FANUC digital servo bus',
+    'Маса': '≈ 6.2 кг',
+    'Охолодження': 'Примусове повітряне (вбудований вентилятор)',
+    'Монтаж': 'Шафовий (IP20), орієнтація за інструкцією OEM',
+  },
+  kukaKr6: {
+    'Кінематика': '6 осей (вертикально-жолобкова)',
+    'Номінальне навантаження': '6 кг',
+    'Досяжність': 'до ≈ 901 мм (KR 6 R900 — орієнтовно)',
+    'Повторюваність': '±0,03 мм (типово для серії)',
+    'Маса робота': '≈ 52 кг',
+    'Живлення': '3×400 В AC + PE (через шафу керування KRC)',
+  },
+  kukaKr10: {
+    'Кінематика': '6 осей',
+    'Номінальне навантаження': '10 кг',
+    'Досяжність': 'до ≈ 1101 мм (KR 10 R1100 — орієнтовно)',
+    'Повторюваність': '±0,03 мм (типово для серії)',
+    'Маса робота': '≈ 64 кг',
+    'Живлення': '3×400 В AC + PE',
+  },
+  kukaKr16: {
+    'Кінематика': '6 осей (подовжена L-кінематика)',
+    'Номінальне навантаження': '16 кг',
+    'Досяжність': 'до ≈ 1613 мм (KR 16 L6-2 — орієнтовно)',
+    'Повторюваність': '±0,05 мм (залежить від навантаження/режиму)',
+    'Маса робота': '≈ 238 кг',
+    'Живлення': '3×400 В AC + PE',
+  },
+} as const
 
 type HistoryInput = {
   dayOffset: number
@@ -17,6 +109,7 @@ type ComponentSeed = {
   model: string
   description: string
   imageUrl?: string
+  specs?: Record<string, string>
   unitPrice: string
   minStockLevel: number
   history: HistoryInput[]
@@ -42,8 +135,8 @@ const components: ComponentSeed[] = [
     manufacturer: 'Elecfreaks',
     model: 'HC-SR04',
     description: 'Бюджетний датчик для мобільних платформ та навчальних стендів.',
-    imageUrl:
-      'https://upload.wikimedia.org/wikipedia/commons/1/1a/HC_SR04_Ultrasonic_sensor_1480322_3_4_HDR_Enhancer.jpg',
+    imageUrl: CATALOG_IMAGES.distanceSensor,
+    specs: { ...SPECS.hcSr04 },
     unitPrice: '3.90',
     minStockLevel: 20,
     history: [
@@ -61,8 +154,8 @@ const components: ComponentSeed[] = [
     manufacturer: 'STMicroelectronics',
     model: 'VL53L0X',
     description: 'Лазерний ToF модуль для точної ближньої навігації.',
-    imageUrl:
-      'https://upload.wikimedia.org/wikipedia/commons/5/59/Arduino_UNO_%2B_HC-SR04_%2B_HC_05_%2B_breadboard_-_bird%27s_eye_00.jpg',
+    imageUrl: CATALOG_IMAGES.distanceSensor,
+    specs: { ...SPECS.vl53 },
     unitPrice: '10.50',
     minStockLevel: 10,
     history: [
@@ -80,8 +173,8 @@ const components: ComponentSeed[] = [
     manufacturer: 'Slamtec',
     model: 'RPLIDAR A2',
     description: 'Лідар для SLAM та побудови карти в приміщенні.',
-    imageUrl:
-      'https://upload.wikimedia.org/wikipedia/commons/e/ec/RPLIDAR_A1_360_Degree_Laser_Scanner.jpg',
+    imageUrl: CATALOG_IMAGES.distanceSensor,
+    specs: { ...SPECS.lidar },
     unitPrice: '189.00',
     minStockLevel: 4,
     history: [
@@ -99,8 +192,8 @@ const components: ComponentSeed[] = [
     manufacturer: 'Logitech',
     model: 'C920',
     description: 'Камера компютерного зору для захоплення потокового відео.',
-    imageUrl:
-      'https://upload.wikimedia.org/wikipedia/commons/6/6e/Machine_Vision_System.jpg',
+    imageUrl: CATALOG_IMAGES.camera,
+    specs: { ...SPECS.camUsb },
     unitPrice: '69.00',
     minStockLevel: 6,
     history: [
@@ -118,8 +211,8 @@ const components: ComponentSeed[] = [
     manufacturer: 'Intel',
     model: 'RealSense D435i',
     description: 'Камера глибини з IMU для маніпуляції та 3D-сприйняття.',
-    imageUrl:
-      'https://upload.wikimedia.org/wikipedia/commons/thumb/5/52/Intel_RealSense_Depth_Camera_D435.jpg/640px-Intel_RealSense_Depth_Camera_D435.jpg',
+    imageUrl: CATALOG_IMAGES.camera,
+    specs: { ...SPECS.camRgbd },
     unitPrice: '329.00',
     minStockLevel: 3,
     history: [
@@ -137,8 +230,8 @@ const components: ComponentSeed[] = [
     manufacturer: 'FLIR',
     model: 'Blackfly S',
     description: 'Промислова камера високої частоти кадрів для QA-систем.',
-    imageUrl:
-      'https://upload.wikimedia.org/wikipedia/commons/8/8d/Draeger_Ignition_Interlock_Camera.jpg',
+    imageUrl: CATALOG_IMAGES.camera,
+    specs: { ...SPECS.camIndustrial },
     unitPrice: '510.00',
     minStockLevel: 2,
     history: [
@@ -156,8 +249,8 @@ const components: ComponentSeed[] = [
     manufacturer: 'FANUC',
     model: 'A06B-6096-H205',
     description: 'Сервопідсилювач для осей промислових роботів FANUC.',
-    imageUrl:
-      'https://upload.wikimedia.org/wikipedia/commons/e/e0/Servo_driver.jpg',
+    imageUrl: CATALOG_IMAGES.servoDrive,
+    specs: { ...SPECS.fanucServo },
     unitPrice: '1480.00',
     minStockLevel: 2,
     history: [
@@ -175,8 +268,8 @@ const components: ComponentSeed[] = [
     manufacturer: 'FANUC',
     model: 'A06B-6114-H209',
     description: 'Потужний привід для важких осей та позиціонерів.',
-    imageUrl:
-      'https://commons.wikimedia.org/wiki/Special:FilePath/ServoDrive.jpg',
+    imageUrl: CATALOG_IMAGES.servoDrive,
+    specs: { ...SPECS.fanucServo },
     unitPrice: '1960.00',
     minStockLevel: 1,
     history: [
@@ -194,8 +287,8 @@ const components: ComponentSeed[] = [
     manufacturer: 'FANUC',
     model: 'A06B-6117-H211',
     description: 'Високопотужний сервопривід для осей великої інерції.',
-    imageUrl:
-      'https://commons.wikimedia.org/wiki/Special:FilePath/Servo_motor_drive.png',
+    imageUrl: CATALOG_IMAGES.servoDrive,
+    specs: { ...SPECS.fanucServo },
     unitPrice: '2780.00',
     minStockLevel: 1,
     history: [
@@ -213,8 +306,8 @@ const components: ComponentSeed[] = [
     manufacturer: 'KUKA',
     model: 'KR 6 R900 sixx',
     description: '6-осьовий маніпулятор для високоточної збірки.',
-    imageUrl:
-      'https://upload.wikimedia.org/wikipedia/commons/d/da/KUKA_Robot_-_Andover_Controls.jpg',
+    imageUrl: CATALOG_IMAGES.kukaManipulator,
+    specs: { ...SPECS.kukaKr6 },
     unitPrice: '23900.00',
     minStockLevel: 1,
     history: [
@@ -232,8 +325,8 @@ const components: ComponentSeed[] = [
     manufacturer: 'KUKA',
     model: 'KR 10 R1100',
     description: 'Універсальний 6-осьовий маніпулятор для пакування.',
-    imageUrl:
-      'https://commons.wikimedia.org/wiki/Special:FilePath/UR16e_robot_arm.png',
+    imageUrl: CATALOG_IMAGES.kukaManipulator,
+    specs: { ...SPECS.kukaKr10 },
     unitPrice: '27400.00',
     minStockLevel: 1,
     history: [
@@ -251,8 +344,8 @@ const components: ComponentSeed[] = [
     manufacturer: 'KUKA',
     model: 'KR 16 L6-2',
     description: 'Подовжена кінематика для обслуговування конвеєрів.',
-    imageUrl:
-      'https://upload.wikimedia.org/wikipedia/commons/2/2b/KUKA_KR_16_industrial_robot.jpg',
+    imageUrl: CATALOG_IMAGES.kukaManipulator,
+    specs: { ...SPECS.kukaKr16 },
     unitPrice: '31200.00',
     minStockLevel: 1,
     history: [
@@ -266,6 +359,26 @@ const components: ComponentSeed[] = [
 ]
 
 async function main() {
+  const adminPassword = 'Admin123!'
+  const passwordHash = await bcrypt.hash(adminPassword, 12)
+  const admin = await prisma.user.upsert({
+    where: { email: 'admin@example.local' },
+    update: {
+      passwordHash,
+      firstName: 'Адмін',
+      lastName: 'Тестовий',
+      role: 'ADMIN',
+    },
+    create: {
+      email: 'admin@example.local',
+      passwordHash,
+      firstName: 'Адмін',
+      lastName: 'Тестовий',
+      role: 'ADMIN',
+    },
+    select: { id: true, email: true },
+  })
+
   await prisma.stockHistory.deleteMany()
   await prisma.component.deleteMany()
 
@@ -280,6 +393,7 @@ async function main() {
         manufacturer: item.manufacturer,
         model: item.model,
         description: item.description,
+        specs: item.specs ?? undefined,
         imageUrl: item.imageUrl ?? null,
         unitPrice: item.unitPrice,
         minStockLevel: item.minStockLevel,
@@ -293,6 +407,7 @@ async function main() {
       await prisma.stockHistory.create({
         data: {
           componentId: created.id,
+          userId: admin.id,
           changeAmount: h.changeAmount,
           balanceAfter: balance,
           reason: h.reason,
@@ -310,6 +425,7 @@ async function main() {
   }
 
   console.info(`Seed complete: ${components.length} components, ${totalHistoryRows} stock history rows.`)
+  console.info(`Тестовий адмін: ${admin.email} / пароль: ${adminPassword}`)
 }
 
 main()

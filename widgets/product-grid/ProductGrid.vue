@@ -3,6 +3,8 @@ import ProductCard from '~/entities/product/ProductCard.vue'
 import ProductFilters from '~/features/product-filter/ProductFilters.vue'
 import type { ProductSort, ProductsApiResponse } from '~/shared/api/types'
 
+const { isAdmin } = useUserSession()
+
 const page = ref(1)
 const pageSize = 12
 
@@ -79,7 +81,14 @@ function nextPage() {
     <p v-else-if="!items.length" class="text-sm text-zinc-500 dark:text-zinc-400">Нічого не знайдено за поточними фільтрами.</p>
 
     <div v-else class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-      <ProductCard v-for="item in items" :key="item.id" :product="item" />
+      <ProductCard
+        v-for="(item, index) in items"
+        :key="item.id"
+        :product="item"
+        :show-admin-actions="isAdmin"
+        :image-priority="index < 6"
+        @removed="refresh()"
+      />
     </div>
 
     <div class="flex items-center justify-center gap-2">

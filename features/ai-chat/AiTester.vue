@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ChatApiBody, ChatApiResponse, ComponentsApiResponse } from '~/shared/api/types'
+import type { ChatApiBody, ChatApiResponse } from '~/shared/api/types'
 import { simpleMarkdownToHtml } from '~/shared/lib/simpleMarkdownToHtml'
 
 const input = ref('')
@@ -18,19 +18,6 @@ const { data, error, status, execute } = useFetch<ChatApiResponse>('/api/ai/chat
 })
 
 const isLoading = computed(() => status.value === 'pending')
-
-const {
-  data: componentsData,
-  status: componentsStatus,
-  error: componentsError,
-  refresh: refreshComponents,
-} = useFetch<ComponentsApiResponse>('/api/components', {
-  method: 'GET',
-  server: false,
-})
-
-const isComponentsLoading = computed(() => componentsStatus.value === 'pending')
-const components = computed(() => componentsData.value?.items ?? [])
 
 const replyMarkdown = computed(() => {
   const r = data.value?.reply
@@ -66,10 +53,10 @@ async function send() {
 
 <template>
   <section
-    class="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/60 sm:p-6"
+    class="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/60 sm:p-7"
   >
     <h2 class="text-base font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-      Тест асистента (Gemini)
+      Інтелектуальний асистент Скаут
     </h2>
     <p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
       Запит обробляється на сервері; ключ не потрапляє у браузер.
@@ -82,7 +69,7 @@ async function send() {
           v-model="input"
           type="text"
           autocomplete="off"
-          placeholder="Наприклад: порівняй DC-редукторний мотор і кроковий для CNC"
+          placeholder="Наприклад: порівняй сервоприводи для маніпулятора"
           class="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm text-zinc-900 outline-none ring-emerald-500/30 transition placeholder:text-zinc-400 focus:border-emerald-500/50 focus:bg-white focus:ring-4 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:bg-zinc-950"
           :disabled="isLoading"
         />
@@ -116,48 +103,16 @@ async function send() {
       <p v-else class="text-zinc-500 dark:text-zinc-400">Відповідь зʼявиться тут.</p>
     </div>
 
-    <div class="mt-6">
-      <div class="mb-3 flex items-center justify-between gap-3">
-        <h3 class="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-          Дані з бази (компоненти)
-        </h3>
-        <button
-          type="button"
-          class="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
-          :disabled="isComponentsLoading"
-          @click="refreshComponents()"
-        >
-          {{ isComponentsLoading ? 'Оновлюється…' : 'Оновити' }}
-        </button>
-      </div>
-
-      <div
-        class="max-h-80 overflow-auto rounded-xl border border-zinc-100 bg-zinc-50/80 p-3 dark:border-zinc-800 dark:bg-zinc-950/50"
+    <div class="mt-6 flex items-center justify-between rounded-xl border border-zinc-200 bg-zinc-50/70 p-3 dark:border-zinc-800 dark:bg-zinc-950/50">
+      <p class="text-sm text-zinc-600 dark:text-zinc-300">
+        Потрібен повний перегляд позицій та залишків?
+      </p>
+      <NuxtLink
+        to="/catalog"
+        class="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
       >
-        <p v-if="isComponentsLoading" class="text-sm text-zinc-500 dark:text-zinc-400">
-          Завантаження компонентів з БД…
-        </p>
-        <p v-else-if="componentsError" class="text-sm text-red-600 dark:text-red-400">
-          Не вдалося завантажити дані з БД.
-        </p>
-        <div v-else-if="components.length" class="space-y-2">
-          <div
-            v-for="item in components"
-            :key="item.id"
-            class="rounded-lg border border-zinc-200 bg-white p-3 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-          >
-            <p class="font-medium text-zinc-900 dark:text-zinc-100">
-              {{ item.name }} ({{ item.model }})
-            </p>
-            <p class="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
-              SKU: {{ item.sku }} · {{ item.manufacturer }} · Залишок: {{ item.quantityOnHand }}
-            </p>
-          </div>
-        </div>
-        <p v-else class="text-sm text-zinc-500 dark:text-zinc-400">
-          У базі ще немає компонентів.
-        </p>
-      </div>
+        Відкрити каталог
+      </NuxtLink>
     </div>
   </section>
 </template>

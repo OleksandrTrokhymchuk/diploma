@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { ProductCategory, ProductSort } from '~/shared/api/types'
+import { formatProductCategory } from '~/shared/lib/displayLabels'
 
 const props = defineProps<{
   categories: ProductCategory[]
@@ -36,7 +37,7 @@ function updateField<K extends keyof typeof props.modelValue>(field: K, value: (
         :value="modelValue.search"
         type="text"
         class="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 outline-none focus:border-emerald-500 dark:border-zinc-700 dark:bg-zinc-950"
-        placeholder="Назва, SKU, опис..."
+        placeholder="Назва, артикул, опис..."
         @input="updateField('search', ($event.target as HTMLInputElement).value)"
       >
     </label>
@@ -49,7 +50,7 @@ function updateField<K extends keyof typeof props.modelValue>(field: K, value: (
         @change="updateField('category', ($event.target as HTMLSelectElement).value)"
       >
         <option value="">Усі категорії</option>
-        <option v-for="c in categories" :key="c" :value="c">{{ c.replaceAll('_', ' ') }}</option>
+        <option v-for="c in categories" :key="c" :value="c">{{ formatProductCategory(c) }}</option>
       </select>
     </label>
 
@@ -77,7 +78,7 @@ function updateField<K extends keyof typeof props.modelValue>(field: K, value: (
         <option value="price_desc">Ціна: спадання</option>
         <option value="stock_asc">Залишок: менше спочатку</option>
         <option value="stock_desc">Залишок: більше спочатку</option>
-        <option value="name_asc">Назва: A-Z</option>
+        <option value="name_asc">Назва: А–Я</option>
       </select>
     </label>
   </div>
